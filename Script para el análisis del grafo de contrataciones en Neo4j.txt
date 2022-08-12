@@ -1,0 +1,108 @@
+//SCRIPT PARA EL ANÁLISIS DEL GRAFO DE CONTRATACIONES EN NEO4J
+
+//1. CREAR UNA PROYECCIÓN MONOPARTITA DEL GRAFO QUE SOLAMENTE CONECTE A LOS PROVEEDORES QUE HAN CONCURRIDO PROCESOS DE CONTRATACIÓN A TRAVÉS DE UNA RELACIÓN :COTENDER QUE CONTENGA UNA PROPIEDAD CON EL CONTADOR DE CONCURRENCIAS
+
+MATCH (n1:Supplier)−[:isSupplierFor]−>(c1:ContractingProcess)<−[:isSupplierFor]-(n2:Supplier)
+WHERE n1<>n2
+WITH n1,n2 , count (c1) AS count
+MERGE (n1)−[cotender:COTENDER]−(n2)
+SET cotender.count = count
+RETURN *
+
+//2. CÁLCULO DEL GRADO DE LOS PROVEEDORES (:SUPPLIER) QUE CONCURREN EN LOS MISMOS PROCESOS DE CONTRATACIÓN EN UN GRAFO MONOPARTITO
+
+:param limit => ( 50);
+:param config => ({
+  relationshipWeightProperty: 'count'
+});
+:param graphConfig => ({
+  nodeProjection: 'Supplier',
+  relationshipProjection: {
+    relType: {
+      type: 'COTENDER',
+      orientation: 'UNDIRECTED',
+      properties: {
+        monto: {
+          property: 'count',
+          defaultValue: 1
+        }
+      }
+    }
+  }
+});
+:param communityNodeLimit => ( 10);
+:param generatedName => ('in-memory-graph-1660345774226');
+
+CALL gds.graph.create($generatedName, $graphConfig.nodeProjection,$graphConfig.relationshipProjection, {});
+
+CALL gds.degree.stream($generatedName, $config) YIELD nodeId, score
+WITH gds.util.asNode(nodeId) AS node, score
+RETURN node, score
+ORDER BY score DESC
+LIMIT toInteger($limit);
+
+CALL gds.graph.drop($generatedName);
+
+
+//3. CÁLCULO DE LA INTERMEDIACIÓN DE LOS PROVEEDORES (:SUPPLIER) QUE PARTICIPAN EN LOS MISMOS PROCESOS DE CONTRATACIÓN EN UN GRAFO MONOPARTITO
+
+:param limit => ( 50);
+:param config => ({});
+:param graphConfig => ({
+  nodeProjection: 'Supplier',
+  relationshipProjection: {
+    relType: {
+      type: 'COTENDER',
+      orientation: 'UNDIRECTED',
+      properties: {}
+    }
+  }
+});
+:param communityNodeLimit => ( 10);
+:param generatedName => ('in-memory-graph-1660346120651');
+
+CALL gds.graph.create($generatedName, $graphConfig.nodeProjection, $graphConfig.relationshipProjection, {});
+
+CALL gds.betweenness.stream($generatedName, $config) YIELD nodeId, score
+WITH gds.util.asNode(nodeId) AS node, score
+RETURN node, score
+ORDER BY score DESC
+LIMIT toInteger($limit);
+
+CALL gds.graph.drop($generatedName);
+
+
+//4. CÁLCULO DE LA CERCANÍA DE LOS PROVEEDORES (:SUPPLIER) QUE PARTICIPAN EN LOS MISMOS PROCESOS DE CONTRATACIÓN EN UN GRAFO MONOPARTITO
+
+:param limit => ( 50);
+:param config => ({});
+:param graphConfig => ({
+  nodeProjection: 'Supplier',
+  relationshipProjection: {
+    relType: {
+      type: 'COTENDER',
+      orientation: 'UNDIRECTED',
+      properties: {}
+    }
+  }
+});
+:param communityNodeLimit => ( 10);
+:param generatedName => ('in-memory-graph-1660346294981');
+
+CALL gds.graph.create($generatedName, $graphConfig.nodeProjection, $graphConfig.relationshipProjection, {});
+
+CALL gds.alpha.closeness.stream($generatedName, $config) YIELD nodeId, score
+WITH gds.util.asNode(nodeId) AS node, score
+RETURN node, score
+ORDER BY score DESC
+LIMIT toInteger($limit);
+
+CALL gds.graph.drop($generatedName);
+
+
+	
+
+
+
+
+
