@@ -1,0 +1,41 @@
+//SCRIPT DE CARGA DE DATOS EN NEO4J
+
+
+//1. CREACIÓN DE NODOS
+
+// Crear nodos de Instituciones Compradoras (:Buyer)
+LOAD CSV WITH HEADERS FROM 'file:///Buyer.csv' AS row 
+CREATE (buyer:Buyer{id:row.id,name:row.name});
+
+// Crear nodos de Procesos de Contratación (:ContractingProcess)
+LOAD CSV WITH HEADERS FROM 'file:///ContractingProcess.csv' AS row 
+CREATE(contractingProcess:ContractingProcess{ocid:row.ocid,description:row.description,amendment:row.amendment,mainProcurementCategory:row.mainProcurementCategory,submissionMethod:row.submissionMethod,procurementMethod:row.procurementMethod});
+
+// Crear nodos de Adjudicatarios (:Supplier)
+LOAD CSV WITH HEADERS FROM 'file:///Supplier.csv' AS row CREATE (supplier:Supplier{id:row.id,name:row.name});
+
+
+//2. CREACIÓN DE ÍNDICES (estructuras de datos para mejorar la velocidad de las operaciones de la base de datos)
+
+// Crear un índice para (Buyer:id)
+CREATE INDEX ON :Buyer(id);
+
+// Crear un índice para (ContractingProcess:ocid)
+CREATE INDEX ON : ContractingProcess(ocid);
+
+// Crear un índice para (ProcuringEntity:name)
+CREATE INDEX ON :ProcuringEntity(name);
+
+
+//3. CREACIÓN DE RELACIONES
+
+// Crear relaciones entre nodos de Instituciones Compradoras y Procesos de Contratación (:isBuyerFor)
+LOAD CSV WITH HEADERS FROM 'file:///isBuyerFor.csv' AS row 
+MATCH (buyer:Buyer{name:(row.name)}),(contractingProcess:ContractingProcess{ocid:(row.ocid)}) 
+CREATE (buyer)-[:isBuyerFor]->(ContractingProcess);
+
+// Crear relaciones entre nodos de Adjudicatarios y Procesos de Contratación (:isSupplierFor)
+LOAD CSV WITH HEADERS FROM 'file:///isSupplierFor.csv' AS row 
+MATCH (supplier:Supplier{id:(row.id)}),(contractingProcess:ContractingProcess{ocid:(row.ocid)}) 
+CREATE (Supplier)-[:isSupplierFor]->(ContractingProcess);
+
